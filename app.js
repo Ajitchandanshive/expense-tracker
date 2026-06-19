@@ -2,18 +2,22 @@
 class ExpenseTracker {
     constructor() {
         this.expenses = this.loadExpenses();
+        this.fuelEntries = this.loadFuelEntries();
         this.currentDate = new Date();
+        this.lastKM = 0;
         this.init();
     }
 
     init() {
         this.setupEventListeners();
         this.setTodayDate();
+        this.setTodayFuelDate();
         this.render();
     }
 
     setupEventListeners() {
         document.getElementById('expenseForm').addEventListener('submit', (e) => this.addExpense(e));
+        document.getElementById('fuelForm').addEventListener('submit', (e) => this.addFuelEntry(e));
         document.getElementById('prevMonth').addEventListener('click', () => this.previousMonth());
         document.getElementById('nextMonth').addEventListener('click', () => this.nextMonth());
         document.getElementById('filterCategory').addEventListener('change', () => this.render());
@@ -23,6 +27,11 @@ class ExpenseTracker {
     setTodayDate() {
         const today = new Date();
         document.getElementById('date').valueAsDate = today;
+    }
+
+    setTodayFuelDate() {
+        const today = new Date();
+        document.getElementById('fuelDate').valueAsDate = today;
     }
 
     addExpense(e) {
@@ -50,6 +59,81 @@ class ExpenseTracker {
             this.saveExpenses();
             this.render();
         }
+    }
+
+    // Fuel Tracking Methods
+    addFuelEntry(e) {
+        e.preventDefault();
+
+        const currentKM = parseFloat(document.getElementById('currentKM').value);
+        const litersUsed = parseFloat(document.getElementById('litersUsed').value);
+        const pricePerLiter = parseFloat(document.getElementById('pricePerLiter').value);
+        const totalSpent = litersUsed * pricePerLiter;
+
+        const fuelEntry = {
+            id: Date.now(),
+            date: document.getElementById('fuelDate').value,
+            currentKM: currentKM,
+            litersUsed: litersUsed,
+            pricePerLiter: pricePerLiter,
+            totalSpent: totalSpent,
+            notes: document.getElementById('fuelNotes').value || '',
+            efficiency: this.calculateEntryEfficiency(currentKM)
+        };
+
+        this.fuelEntries.push(fuelEntry);
+        this.saveFuelEntries();
+        document.getElementById('fuelForm').reset();
+        this.setTodayFuelDate();
+        this.render();
+    }
+
+    deleteFuelEntry(id) {
+        if (confirm('Are you sure you want to delete this fuel entry?')) {
+            this.fuelEntries = this.fuelEntries.filter(e => e.id !== id);
+            this.saveFuelEntries();
+            this.render();
+        }
+    }
+
+    calculateEntryEfficiency(currentKM) {
+        if (this.fuelEntries.length === 0) {
+            return 0;
+        }
+
+        const sorted = [...this.fuelEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const lastEntry = sorted[sorted.length - 1];
+        const kmBurned = currentKM - lastEntry.currentKM;
+
+        if (kmBurned <= 0) return 0;
+
+        return kmBurned / this.fuelEntries[this.fuelEntries.length - 1].litersUsed;
+    }
+
+    getFuelStats() {
+        if (this.fuelEntries.length === 0) {
+            return {
+                avgEfficiency: 0,
+                totalSpent: 0,
+                totalLiters: 0,
+                totalKM: 0
+            };
+        }
+
+        const sorted = [...this.fuelEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const totalLiters = this.fuelEntries.reduce((sum, e) => sum + e.litersUsed, 0);
+        const totalSpent = this.fuelEntries.reduce((sum, e) => sum + e.totalSpent, 0);
+        const totalKM = sorted[sorted.length - 1].currentKM - (sorted.length > 1 ? sorted[0].currentKM : 0);
+
+        // Calculate average efficiency (total KM / total liters)
+        const avgEfficiency = totalLiters > 0 ? totalKM / totalLiters : 0;
+
+        return {
+            avgEfficiency: avgEfficiency,
+            totalSpent: totalSpent,
+            totalLiters: totalLiters,
+            totalKM: totalKM >= 0 ? totalKM : 0
+        };
     }
 
     getMonthYear(date = this.currentDate) {
@@ -136,6 +220,8 @@ class ExpenseTracker {
         this.renderSummary();
         this.renderCategoryBreakdown();
         this.renderExpensesList();
+        this.renderFuelStats();
+        this.renderFuelEntries();
     }
 
     renderMonthLabel() {
@@ -209,6 +295,67 @@ class ExpenseTracker {
         return div.innerHTML;
     }
 
+    renderFuelStats() {
+        const stats = this.getFuelStats();
+        document.getElementById('avgEfficiency').textContent = stats.avgEfficiency.toFixed(2) + ' KM/L';
+        document.getElementById('totalFuelSpent').textContent = this.formatCurrency(stats.totalSpent);
+        document.getElementById('totalLiters').textContent = stats.totalLiters.toFixed(2) + ' L';
+        document.getElementById('totalKM').textContent = Math.round(stats.totalKM) + ' KM';
+    }
+
+    renderFuelEntries() {
+        const container = document.getElementById('fuelEntries');
+        container.innerHTML = '';
+
+        if (this.fuelEntries.length === 0) {
+            container.innerHTML = '<div class="fuel-empty-state"><div class="empty-state-icon">⛽</div>No fuel entries yet</div>';
+            return;
+        }
+
+        const sorted = [...this.fuelEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        sorted.forEach((entry, index) => {
+            const prevEntry = index < sorted.length - 1 ? sorted[index + 1] : null;
+            const kmBurned = prevEntry ? entry.currentKM - prevEntry.currentKM : 0;
+            const efficiency = entry.litersUsed > 0 ? kmBurned / entry.litersUsed : 0;
+
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'fuel-entry';
+            entryDiv.innerHTML = `
+                <div class="fuel-entry-details">
+                    <div class="fuel-entry-date">${this.formatDate(entry.date)}</div>
+                    <div class="fuel-entry-info">
+                        <div class="fuel-entry-info-item">
+                            <span class="fuel-entry-info-label">KM:</span>
+                            <span>${entry.currentKM}</span>
+                        </div>
+                        <div class="fuel-entry-info-item">
+                            <span class="fuel-entry-info-label">Liters:</span>
+                            <span>${entry.litersUsed.toFixed(2)} L</span>
+                        </div>
+                        <div class="fuel-entry-info-item">
+                            <span class="fuel-entry-info-label">Rate:</span>
+                            <span>₹${entry.pricePerLiter.toFixed(2)}/L</span>
+                        </div>
+                        ${entry.notes ? `<div class="fuel-entry-info-item"><span class="fuel-entry-info-label">Note:</span><span>${this.escapeHtml(entry.notes)}</span></div>` : ''}
+                    </div>
+                </div>
+                <div class="fuel-entry-stats">
+                    ${prevEntry ? `<div class="fuel-entry-efficiency">
+                        <div class="fuel-entry-efficiency-value">${efficiency.toFixed(2)}</div>
+                        <div class="fuel-entry-efficiency-label">KM/L</div>
+                    </div>` : '<div class="fuel-entry-efficiency"><div class="fuel-entry-efficiency-label">First entry</div></div>'}
+                    <div class="fuel-entry-amount">
+                        <div class="fuel-entry-amount-value">${this.formatCurrency(entry.totalSpent)}</div>
+                        <div class="fuel-entry-amount-label">Spent</div>
+                    </div>
+                    <button class="btn-delete" onclick="app.deleteFuelEntry(${entry.id})">Delete</button>
+                </div>
+            `;
+            container.appendChild(entryDiv);
+        });
+    }
+
     exportToCSV() {
         const monthExpenses = this.getMonthExpenses();
         if (monthExpenses.length === 0) {
@@ -251,6 +398,15 @@ class ExpenseTracker {
 
     loadExpenses() {
         const saved = localStorage.getItem('expenses');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    saveFuelEntries() {
+        localStorage.setItem('fuelEntries', JSON.stringify(this.fuelEntries));
+    }
+
+    loadFuelEntries() {
+        const saved = localStorage.getItem('fuelEntries');
         return saved ? JSON.parse(saved) : [];
     }
 }

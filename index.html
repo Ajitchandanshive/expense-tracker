@@ -107,6 +107,71 @@
                 <!-- Expenses will be populated here -->
             </ul>
         </div>
+
+        <!-- Fuel Tracking Section -->
+        <div class="fuel-section">
+            <h2>⛽ Fuel Tracker</h2>
+            
+            <!-- Fuel Summary Cards -->
+            <div class="fuel-summary-cards">
+                <div class="fuel-card">
+                    <h3>Average Efficiency</h3>
+                    <p class="fuel-value" id="avgEfficiency">0.00 KM/L</p>
+                </div>
+                <div class="fuel-card">
+                    <h3>Total Spent</h3>
+                    <p class="fuel-value" id="totalFuelSpent">₹0.00</p>
+                </div>
+                <div class="fuel-card">
+                    <h3>Total Liters</h3>
+                    <p class="fuel-value" id="totalLiters">0.00 L</p>
+                </div>
+                <div class="fuel-card">
+                    <h3>Total KM</h3>
+                    <p class="fuel-value" id="totalKM">0 KM</p>
+                </div>
+            </div>
+
+            <!-- Add Fuel Entry Form -->
+            <div class="fuel-form-section">
+                <h3>Add Fuel Entry</h3>
+                <form id="fuelForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fuelDate">Date</label>
+                            <input type="date" id="fuelDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="currentKM">Current KM Reading</label>
+                            <input type="number" id="currentKM" placeholder="e.g., 15000" step="1" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="litersUsed">Fuel Used (Liters)</label>
+                            <input type="number" id="litersUsed" placeholder="e.g., 5.5" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pricePerLiter">Price per Liter (₹)</label>
+                            <input type="number" id="pricePerLiter" placeholder="e.g., 100" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="fuelNotes">Notes (Optional)</label>
+                        <input type="text" id="fuelNotes" placeholder="e.g., Regular check-up">
+                    </div>
+                    <button type="submit" class="btn-primary">Add Fuel Entry</button>
+                </form>
+            </div>
+
+            <!-- Fuel Entries List -->
+            <div class="fuel-entries-list">
+                <h3>Recent Fuel Entries</h3>
+                <div class="fuel-entries" id="fuelEntries">
+                    <!-- Fuel entries will be populated here -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>
